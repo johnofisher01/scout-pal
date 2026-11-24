@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react'
@@ -31,6 +30,12 @@ export default function Home() {
   const [plannedKids, setPlannedKids] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // --- Ask the bot state ---
+  const [question, setQuestion] = useState('')
+  const [answer, setAnswer] = useState('')
+  const [asking, setAsking] = useState(false)
+  const [askError, setAskError] = useState('')
 
   const countNeeded = haveKids === 'Yes'
   const countValid =
@@ -92,6 +97,35 @@ export default function Home() {
       setStatus('Unable to connect to the server')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // --- Ask the bot ---
+  async function askBot() {
+    if (!question.trim() || asking) return
+
+    setAsking(true)
+    setAnswer('')
+    setAskError('')
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      })
+
+      const data = await res.json()
+
+      if (data.answer) {
+        setAnswer(data.answer)
+      } else {
+        setAskError(data.error || 'Something went wrong')
+      }
+    } catch {
+      setAskError('Unable to connect to the server')
+    } finally {
+      setAsking(false)
     }
   }
 
@@ -364,6 +398,68 @@ export default function Home() {
                   className="bg-[#0c66e4] hover:bg-[#0055cc] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg shadow-sm transition"
                 >
                   {loading ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+
+            </div>
+          </section>
+
+          {/* Ask the community card */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lg">
+                  Ask the community
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Ask a question and get an answer based on what people have submitted.
+                </p>
+              </div>
+
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                ⌕
+              </div>
+            </div>
+
+            <div className="p-6">
+
+              <label htmlFor="question" className="block text-sm font-medium mb-2">
+                Your question
+              </label>
+              <input
+                id="question"
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') askBot() }}
+                placeholder="e.g. What are people's biggest worries about having kids?"
+                className={inputClass}
+              />
+
+              {askError && (
+                <div className="mt-5 p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+                  ⚠ {askError}
+                </div>
+              )}
+
+              {answer && (
+                <div className="mt-5 p-4 rounded-lg text-sm bg-blue-50 text-[#172b4d] border border-blue-200 whitespace-pre-wrap leading-relaxed">
+                  {answer}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+                <span className="text-xs text-slate-400">
+                  Answers are generated from real submissions.
+                </span>
+
+                <button
+                  onClick={askBot}
+                  disabled={!question.trim() || asking}
+                  className="bg-[#0c66e4] hover:bg-[#0055cc] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg shadow-sm transition"
+                >
+                  {asking ? 'Thinking...' : 'Ask'}
                 </button>
               </div>
 
